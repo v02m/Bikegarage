@@ -12,14 +12,12 @@ import {
   Title,
 } from "@vkontakte/vkui";
 
-// Импортируем типы и функции для расчета
 import type { CalculatorInputData } from "../CalculatorPanel/CalculatorInputForm";
 import {
   performGearCalculations,
   type AllGearCalculations,
 } from "../../utils/bikeCalculations";
 
-// Импортируем наш новый компонент графика
 import GearChart from "./GearChart";
 
 interface GearRatioResultPanelProps {
@@ -44,6 +42,17 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
       calculatedData.cadence
     );
   }, [calculatedData]);
+
+  // Функция, которую можно передать в GearChart, если понадобится,
+  // чтобы GearChart мог обновить calculatedData в родительском компоненте
+  const handleChartCadenceChange = (newCadence: number) => {
+    if (calculatedData) {
+      // Здесь можно обновить calculatedData, если нужно,
+      // или просто позволить GearChart управлять своим каденсом
+      // В данном случае, GearChart сам пересчитывает данные, так что можно не делать ничего здесь
+      console.log("Каденс изменен в GearChart на:", newCadence);
+    }
+  };
 
   if (!calculatedData || !results) {
     return (
@@ -71,26 +80,21 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
         <SimpleCell>
           Передние звезды:{" "}
           <Text weight="2">{results.chainrings.join(", ")}</Text>
-        </SimpleCell>{" "}
-        {/* ИСПРАВЛЕНО */}
+        </SimpleCell>
         <SimpleCell>
           Задние звезды: <Text weight="2">{results.cassette.join(", ")}</Text>
-        </SimpleCell>{" "}
-        {/* ИСПРАВЛЕНО */}
+        </SimpleCell>
         <SimpleCell>
           Диаметр колеса (введено):{" "}
-          <Text weight="2">{calculatedData.wheelDiameter} мм</Text>{" "}
-          {/* ИСПРАВЛЕНО */}
+          <Text weight="2">{calculatedData.wheelDiameter} мм</Text>
         </SimpleCell>
         <SimpleCell>
           Окружность колеса (рассчитано):{" "}
-          <Text weight="2">{results.wheelCircumferenceMm.toFixed(2)} мм</Text>{" "}
-          {/* ИСПРАВЛЕНО */}
+          <Text weight="2">{results.wheelCircumferenceMm.toFixed(2)} мм</Text>
         </SimpleCell>
         <SimpleCell>
           Каденс: <Text weight="2">{results.cadence} об/мин</Text>
-        </SimpleCell>{" "}
-        {/* ИСПРАВЛЕНО */}
+        </SimpleCell>
       </Group>
 
       <Group header={<Title level="2">Таблица передач</Title>}>
@@ -139,7 +143,14 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
         </Div>
       </Group>
 
-      <GearChart data={results.results} cadence={results.cadence} />
+      <GearChart
+        data={results.results} // Эти данные по-прежнему передаются, хотя GearChart их теперь не использует для расчетов
+        initialCadence={results.cadence} // Передаем начальный каденс
+        onCadenceChange={handleChartCadenceChange} // Передаем обработчик изменения каденса
+        calculatedWheelDiameter={calculatedData.wheelDiameter} // Передаем диаметр колеса
+        initialChainrings={calculatedData.chainrings} // Передаем передние звезды
+        initialCassette={calculatedData.cassette} // Передаем задние звезды
+      />
 
       <Group>
         <Cell>

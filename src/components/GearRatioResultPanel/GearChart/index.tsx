@@ -1,6 +1,14 @@
 // src/components/GearRatioResultPanel/GearChart/index.tsx
-import React, { useMemo } from "react";
-import { Div, Group, Text, Title } from "@vkontakte/vkui";
+import React, { useMemo, useState, useEffect } from "react"; // <-- Добавляем useState и useEffect
+import {
+  Div,
+  Group,
+  Text,
+  Title,
+  Slider,
+  FormItem,
+  Input,
+} from "@vkontakte/vkui"; // <-- Добавляем Slider, FormItem, Input
 
 import {
   ResponsiveContainer,
@@ -13,18 +21,67 @@ import {
   Legend,
 } from "recharts";
 
-import type { GearCalculation } from "../../../utils/bikeCalculations";
+import {
+  performGearCalculations,
+  type GearCalculation,
+} from "../../../utils/bikeCalculations"; // <-- Важно: импортируем performGearCalculations
 
 interface GearChartProps {
-  data: GearCalculation[];
-  cadence: number;
+  data: GearCalculation[]; // Исходные данные со всеми расчетами для дефолтного каденса
+  initialCadence: number; // Изначальный каденс, пришедший из формы
+  // Новый пропс: функция, которая будет вызываться при изменении каденса
+  // GearRatioResultPanel будет использовать ее для пересчета AllGearCalculations
+  onCadenceChange: (newCadence: number) => void;
+  calculatedWheelDiameter: number; // Добавляем диаметр колеса для пересчета
+  initialChainrings: number[]; // Добавляем передние звезды
+  initialCassette: number[]; // Добавляем задние звезды
 }
 
-const GearChart: React.FC<GearChartProps> = ({ data, cadence }) => {
-  console.log("GearChart: props.data (исходные данные):", data);
+const GearChart: React.FC<GearChartProps> = ({
+  data,
+  initialCadence,
+  onCadenceChange,
+  calculatedWheelDiameter,
+  initialChainrings,
+  initialCassette,
+}) => {
+  // Состояние для текущего каденса, который пользователь может менять
+  const [currentCadence, setCurrentCadence] = useState<number>(initialCadence);
 
+  // Когда initialCadence меняется (например, из формы), обновляем currentCadence
+  useEffect(() => {
+    setCurrentCadence(initialCadence);
+  }, [initialCadence]);
+
+  // Пересчитываем данные для графика каждый раз, когда меняется currentCadence или исходные данные
+  const recalculatedData = useMemo(() => {
+    // ВНИМАНИЕ: performGearCalculations возвращает объект AllGearCalculations,
+    // нам нужна его часть .results для графика
+    const newCalculations = performGearCalculations(
+      initialChainrings,
+      initialCassette,
+      calculatedWheelDiameter,
+      currentCadence
+    );
+    return newCalculations.results;
+  }, [
+    initialChainrings,
+    initialCassette,
+    calculatedWheelDiameter,
+    currentCadence,
+  ]);
+
+  console.log("GearChart: props.data (исходные данные):", data); // Это старые данные, но оставим для отладки
+  console.log("GearChart: currentCadence:", currentCadence); // <-- Показывает текущий каденс
+  console.log(
+    "GearChart: recalculatedData (данные для графика):",
+    recalculatedData
+  ); // <-- Смотрим на новые данные
+
+  // Преобразуем данные для графика: группируем по передним звездам
   const chartData = useMemo(() => {
-    const groupedByFrontTeeth = data.reduce((acc, current) => {
+    const groupedByFrontTeeth = recalculatedData.reduce((acc, current) => {
+      // <-- Используем recalculatedData
       if (!acc[current.frontTeeth]) {
         acc[current.frontTeeth] = {};
       }
@@ -33,7 +90,7 @@ const GearChart: React.FC<GearChartProps> = ({ data, cadence }) => {
     }, {} as { [frontTeeth: number]: { [gearRatio: string]: number } });
 
     const allGearRatios = Array.from(
-      new Set(data.map((d) => d.gearRatio.toFixed(2)))
+      new Set(recalculatedData.map((d) => d.gearRatio.toFixed(2))) // <-- Используем recalculatedData
     ).sort();
 
     return allGearRatios.map((ratio) => {
@@ -48,13 +105,14 @@ const GearChart: React.FC<GearChartProps> = ({ data, cadence }) => {
       });
       return entry;
     });
-  }, [data]);
+  }, [recalculatedData]); // <-- Зависимость от recalculatedData
 
   const uniqueFrontTeeth = useMemo(() => {
-    return Array.from(new Set(data.map((d) => d.frontTeeth))).sort(
+    return Array.from(new Set(recalculatedData.map((d) => d.frontTeeth))).sort(
+      // <-- Используем recalculatedData
       (a, b) => a - b
     );
-  }, [data]);
+  }, [recalculatedData]); // <-- Зависимость от recalculatedData
 
   console.log(
     "GearChart: chartData (преобразованные данные для Recharts):",
@@ -70,7 +128,10 @@ const GearChart: React.FC<GearChartProps> = ({ data, cadence }) => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const currentGearRatio = label;
-      const matchingGears = data.filter(
+      // Важно: для Tooltip'а лучше использовать исходные data, если они содержат все детали,
+      // или передавать полную информацию о точке в chartData
+      const matchingGears = recalculatedData.filter(
+        // <-- Используем recalculatedData
         (d) => d.gearRatio.toFixed(2) === currentGearRatio
       );
 
@@ -84,8 +145,6 @@ const GearChart: React.FC<GearChartProps> = ({ data, cadence }) => {
           }}
         >
           <Text weight="2" style={{ marginBottom: 5 }}>
-            {" "}
-            {/* ИСПРАВЛЕНО: {2} на "2" */}
             Передаточное отношение: {currentGearRatio}
           </Text>
           {payload.map((pld: any, index: number) => {
@@ -95,14 +154,9 @@ const GearChart: React.FC<GearChartProps> = ({ data, cadence }) => {
             );
             return (
               <div key={index} style={{ color: pld.stroke }}>
-                <Text weight="1">Перед: {frontTeeth}Т</Text>{" "}
-                {/* ИСПРАВЛЕНО: {1} на "1" */}
-                <Text weight="1">Зад: {gear?.rearTeeth}Т</Text>{" "}
-                {/* ИСПРАВЛЕНО: {1} на "1" */}
-                <Text weight="1">
-                  Скорость: {pld.value?.toFixed(1)} км/ч
-                </Text>{" "}
-                {/* ИСПРАВЛЕНО: {1} на "1" */}
+                <Text weight="1">Перед: {frontTeeth}Т</Text>
+                <Text weight="1">Зад: {gear?.rearTeeth}Т</Text>
+                <Text weight="1">Скорость: {pld.value?.toFixed(1)} км/ч</Text>
               </div>
             );
           })}
@@ -112,14 +166,43 @@ const GearChart: React.FC<GearChartProps> = ({ data, cadence }) => {
     return null;
   };
 
+  const handleCadenceChange = (value: number) => {
+    setCurrentCadence(value);
+    // Опционально: можно вызвать onCadenceChange, если нужно обновить каденс в родительском компоненте (GearRatioResultPanel)
+    // onCadenceChange(value);
+  };
+
+  const handleCadenceInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value)) {
+      setCurrentCadence(value);
+    }
+  };
+
   return (
     <Group header={<Title level="2">Графики скорости</Title>}>
       <Div>
         <Text weight="1" style={{ marginBottom: 10 }}>
-          {" "}
-          {/* ИСПРАВЛЕНО: {1} на "1" */}
-          Скорость (км/ч) для каждой комбинации при каденсе {cadence} об/мин:
+          Скорость (км/ч) для каждой комбинации при каденсе {currentCadence}{" "}
+          об/мин:
         </Text>
+
+        <FormItem top="Каденс (об/мин)">
+          <Slider
+            min={30} // Минимальное значение каденса
+            max={120} // Максимальное значение каденса
+            step={1} // Шаг изменения
+            value={currentCadence}
+            onChange={handleCadenceChange}
+          />
+          <Input
+            type="number"
+            value={currentCadence}
+            onChange={handleCadenceInputChange}
+            style={{ width: "80px", marginTop: "10px" }}
+          />
+        </FormItem>
+
         <ResponsiveContainer width="100%" height={300}>
           <LineChart
             data={chartData}
