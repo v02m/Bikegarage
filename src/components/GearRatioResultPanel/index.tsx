@@ -12,12 +12,16 @@ import {
 } from "@vkontakte/vkui";
 
 // Импортируем типы и функции для расчета
-import type { CalculatorInputData } from "../CalculatorPanel";
+// import type { CalculatorInputData } from "../CalculatorPanel";
+import type { CalculatorInputData } from "../CalculatorPanel/CalculatorInputForm";
 import {
   performGearCalculations,
   type AllGearCalculations,
   type GearCalculation,
 } from "../../utils/bikeCalculations";
+
+// Импортируем наш новый компонент графика
+import GearChart from "./GearChart"; // <-- Импортируем GearChart
 
 interface GearRatioResultPanelProps {
   id: string;

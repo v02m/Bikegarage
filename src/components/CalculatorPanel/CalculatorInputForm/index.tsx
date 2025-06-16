@@ -32,9 +32,11 @@ const CalculatorInputForm: React.FC<CalculatorInputFormProps> = ({
   initialValues,
 }) => {
   // Состояния для входных данных калькулятора
-  const [chainringsInput, setChainringsInput] = useState("30,42"); // Передние звезды, через запятую
+  const [chainringsInput, setChainringsInput] = useState(
+    "28,30,32,34,36,38,40,42"
+  ); // Передние звезды, через запятую
   const [cassetteInput, setCassetteInput] = useState(
-    "11,13,15,18,21,24,28,32,36,40,46"
+    "10,11,13,15,18,21,24,28,32,36,40,46,48,50,52"
   ); // Задние звезды, через запятую
   const [wheelDiameterMm, setWheelDiameterMm] = useState("700"); // Диаметр колеса в мм
   const [cadence, setCadence] = useState("90"); // Каденс в об/мин
@@ -96,7 +98,7 @@ const CalculatorInputForm: React.FC<CalculatorInputFormProps> = ({
             id="chainrings"
             value={chainringsInput}
             onChange={(e) => setChainringsInput(e.target.value)}
-            placeholder="Например: 30,42"
+            placeholder="Например: 28,30,42"
           />
         </FormItem>
 
