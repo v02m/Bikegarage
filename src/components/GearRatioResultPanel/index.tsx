@@ -1,3 +1,4 @@
+// src/components/GearRatioResultPanel/index.tsx
 import React, { useMemo } from "react";
 import {
   Panel,
@@ -12,21 +13,19 @@ import {
 } from "@vkontakte/vkui";
 
 // Импортируем типы и функции для расчета
-// import type { CalculatorInputData } from "../CalculatorPanel";
 import type { CalculatorInputData } from "../CalculatorPanel/CalculatorInputForm";
 import {
   performGearCalculations,
   type AllGearCalculations,
-  type GearCalculation,
 } from "../../utils/bikeCalculations";
 
 // Импортируем наш новый компонент графика
-import GearChart from "./GearChart"; // <-- Импортируем GearChart
+import GearChart from "./GearChart";
 
 interface GearRatioResultPanelProps {
   id: string;
   setActivePanel: (panelId: string) => void;
-  calculatedData: CalculatorInputData | null; // Входные данные для расчетов
+  calculatedData: CalculatorInputData | null;
 }
 
 const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
@@ -34,21 +33,18 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
   setActivePanel,
   calculatedData,
 }) => {
-  // Используем useMemo, чтобы пересчеты происходили только при изменении calculatedData
   const results: AllGearCalculations | null = useMemo(() => {
     if (!calculatedData) {
       return null;
     }
-    // Если данные есть, выполняем расчеты
     return performGearCalculations(
       calculatedData.chainrings,
       calculatedData.cassette,
       calculatedData.wheelDiameter,
       calculatedData.cadence
     );
-  }, [calculatedData]); // Зависимость useMemo
+  }, [calculatedData]);
 
-  // Если данных нет, показываем сообщение или возвращаемся к калькулятору
   if (!calculatedData || !results) {
     return (
       <Panel id={id}>
@@ -75,27 +71,30 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
         <SimpleCell>
           Передние звезды:{" "}
           <Text weight="2">{results.chainrings.join(", ")}</Text>
-        </SimpleCell>
+        </SimpleCell>{" "}
+        {/* ИСПРАВЛЕНО */}
         <SimpleCell>
           Задние звезды: <Text weight="2">{results.cassette.join(", ")}</Text>
-        </SimpleCell>
+        </SimpleCell>{" "}
+        {/* ИСПРАВЛЕНО */}
         <SimpleCell>
           Диаметр колеса (введено):{" "}
-          <Text weight="2">{calculatedData.wheelDiameter} мм</Text>
+          <Text weight="2">{calculatedData.wheelDiameter} мм</Text>{" "}
+          {/* ИСПРАВЛЕНО */}
         </SimpleCell>
         <SimpleCell>
           Окружность колеса (рассчитано):{" "}
-          <Text weight="2">{results.wheelCircumferenceMm.toFixed(2)} мм</Text>
+          <Text weight="2">{results.wheelCircumferenceMm.toFixed(2)} мм</Text>{" "}
+          {/* ИСПРАВЛЕНО */}
         </SimpleCell>
         <SimpleCell>
           Каденс: <Text weight="2">{results.cadence} об/мин</Text>
-        </SimpleCell>
+        </SimpleCell>{" "}
+        {/* ИСПРАВЛЕНО */}
       </Group>
 
       <Group header={<Title level="2">Таблица передач</Title>}>
         <Div style={{ overflowX: "auto" }}>
-          {" "}
-          {/* Делаем таблицу прокручиваемой по горизонтали */}
           <table
             style={{
               width: "100%",
@@ -140,23 +139,7 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
         </Div>
       </Group>
 
-      <Group header={<Title level="2">Графики (Скоро)</Title>}>
-        <Cell>Здесь будут крутые графики скорости и других параметров!</Cell>
-        {/* Placeholder для будущих графиков */}
-        <Div
-          style={{
-            height: "200px",
-            backgroundColor: "var(--vkui--color_background_secondary)",
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--vkui--color_text_secondary)",
-          }}
-        >
-          Место для графика
-        </Div>
-      </Group>
+      <GearChart data={results.results} cadence={results.cadence} />
 
       <Group>
         <Cell>
