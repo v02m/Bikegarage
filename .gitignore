@@ -1,36 +1,52 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Игнорировать зависимости
+node_modules/
 
-# testing
-/coverage
-
-# next.js
-/.next/
+# Игнорировать файлы сборки/дистрибутива
+/dist/
+/build/
 /out/
+dist-ssr
+*.local
 
-# production
-/build
+# Игнорировать файлы IDE
+# Editor directories and files
+.idea/
+.vscode/
+.vscode/*
+!.vscode/extensions.json
+*.iml
 
-# misc
+# Игнорировать временные файлы ОС
 .DS_Store
-*.pem
+Thumbs.db
 
-# debug
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+
+# Игнорировать временные файлы и логи
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
+.npm/
+.pnpm-store/
+.yarn/
+logs
+*.log
+lerna-debug.log*
 
-# local env files
-.env*.local
+# Игнорировать скриншоты
+*.png
+*.jpg
+*.jpeg
+
+# Игнорировать файлы локального окружения
 .env
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+.env.local
+.env.*.local
