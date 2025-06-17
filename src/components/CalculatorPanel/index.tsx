@@ -2,60 +2,44 @@
 import React from "react";
 import { Panel, PanelHeader, Group, Cell, Button } from "@vkontakte/vkui";
 
-// Импортируем нашу новую форму
-import CalculatorInputForm from "./CalculatorInputForm";
-
-// Определение типов данных, которые будет возвращать форма
-// Этот интерфейс теперь экспортируется из CalculatorInputForm
-// Мы его повторно не объявляем, а импортируем для использования
-import type { CalculatorInputData } from "./CalculatorInputForm"; // Импорт типа из CalculatorInputForm
+import CalculatorInputForm, {
+  type CalculatorInputData,
+} from "./CalculatorInputForm";
 
 interface CalculatorPanelProps {
   id: string;
-  onCalculateAndNavigate: (data: CalculatorInputData) => void;
-  initialValues: CalculatorInputData | null; // Новый пропс для начальных значений
+  setActivePanel: (panelId: string) => void;
+  onCalculate: (data: CalculatorInputData) => void;
+  // --- НОВЫЕ ПРОПСЫ ---
+  initialFormData: CalculatorInputData;
+  onFormChange: (data: CalculatorInputData) => void;
 }
 
 const CalculatorPanel: React.FC<CalculatorPanelProps> = ({
   id,
-  onCalculateAndNavigate,
-  initialValues,
+  setActivePanel,
+  onCalculate,
+  initialFormData,
+  onFormChange,
 }) => {
-  const handleFormCalculate = (data: CalculatorInputData) => {
-    console.log("Данные для расчета получены из формы:", data);
-    onCalculateAndNavigate(data); // Используем пропс для передачи данных и смены панели
+  const handleCalculate = (data: CalculatorInputData) => {
+    onCalculate(data);
   };
 
   return (
     <Panel id={id}>
       <PanelHeader>Калькулятор передач</PanelHeader>
-
-      {/* Используем наш новый компонент формы и передаем ему колбэк и начальные значения */}
-      <CalculatorInputForm
-        onCalculate={handleFormCalculate}
-        initialValues={initialValues}
-      />
-
-      {/* Кнопка "Вернуться на Главную" здесь не нужна, так как мы переходим сюда с главной,
-          а отсюда - на экран результатов. Возврат на главную будет с экрана результатов
-          или напрямую из App.tsx через setActivePanel, если это понадобится.
-          Пока оставляем, чтобы избежать регрессий, если она где-то еще нужна. */}
+      <Group>
+        {/* ПЕРЕДАЕМ НОВЫЕ ПРОПСЫ В CalculatorInputForm */}
+        <CalculatorInputForm
+          onCalculate={handleCalculate}
+          initialFormData={initialFormData} // <-- Передаем
+          onFormChange={onFormChange} // <-- Передаем
+        />
+      </Group>
       <Group>
         <Cell>
-          <Button
-            onClick={() =>
-              onCalculateAndNavigate(
-                initialValues || {
-                  chainrings: [],
-                  cassette: [],
-                  wheelDiameter: 0,
-                  cadence: 0,
-                }
-              )
-            }
-          >
-            Вернуться на Главную (без сохранения новых данных)
-          </Button>
+          <Button onClick={() => setActivePanel("home")}>На главную</Button>
         </Cell>
       </Group>
     </Panel>

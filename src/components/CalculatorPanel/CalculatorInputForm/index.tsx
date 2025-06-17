@@ -1,19 +1,20 @@
 // src/components/CalculatorPanel/CalculatorInputForm/index.tsx
-import React, { useState, useEffect } from "react"; // Добавлен useEffect
+import React, { useEffect } from "react"; // Убрали useState, так как состояние теперь в App.tsx
 import {
   Group,
-  FormLayoutGroup,
-  FormItem,
   Input,
-  Textarea,
   Button,
-  Title,
-  Spacing,
-  Cell,
+  FormItem,
+  Textarea,
+  Radio,
+  SimpleCell,
+  Slider,
+  Header,
+  Div,
+  Text,
 } from "@vkontakte/vkui";
 
-// Определение типов данных, которые будет возвращать форма
-// Экспортируем CalculatorInputData, чтобы другие компоненты могли его импортировать
+// Тип данных, которые будет возвращать форма
 export interface CalculatorInputData {
   chainrings: number[];
   cassette: number[];
@@ -21,125 +22,271 @@ export interface CalculatorInputData {
   cadence: number;
 }
 
-// Определение пропсов для компонента формы
 interface CalculatorInputFormProps {
   onCalculate: (data: CalculatorInputData) => void;
-  initialValues: CalculatorInputData | null; // Новый пропс для начальных значений
+  // --- НОВЫЕ ПРОПСЫ ДЛЯ УПРАВЛЕНИЯ СОСТОЯНИЕМ ---
+  initialFormData: CalculatorInputData;
+  onFormChange: (data: CalculatorInputData) => void;
 }
 
 const CalculatorInputForm: React.FC<CalculatorInputFormProps> = ({
   onCalculate,
-  initialValues,
+  initialFormData,
+  onFormChange,
 }) => {
-  // Состояния для входных данных калькулятора
-  const [chainringsInput, setChainringsInput] = useState(
-    "28,30,32,34,36,38,40,42"
-  ); // Передние звезды, через запятую
-  const [cassetteInput, setCassetteInput] = useState(
-    "10,11,13,15,18,21,24,28,32,36,40,46,48,50,52"
-  ); // Задние звезды, через запятую
-  const [wheelDiameterMm, setWheelDiameterMm] = useState("700"); // Диаметр колеса в мм
-  const [cadence, setCadence] = useState("90"); // Каденс в об/мин
+  // Больше не используем локальные useState для chainringsInput, cassetteInput, wheelSizeOption, customWheelDiameter, cadence.
+  // Вместо этого используем initialFormData из пропсов.
 
-  // Используем useEffect для установки начальных значений, если они были переданы
-  useEffect(() => {
-    if (initialValues) {
-      setChainringsInput(initialValues.chainrings.join(","));
-      setCassetteInput(initialValues.cassette.join(","));
-      setWheelDiameterMm(String(initialValues.wheelDiameter)); // Число в строку
-      setCadence(String(initialValues.cadence)); // Число в строку
-    }
-  }, [initialValues]); // Эффект срабатывает при изменении initialValues
-
-  // Функция для обработки расчета
-  const handleCalculate = () => {
-    // Парсинг входных данных
-    const parsedChainrings = chainringsInput
-      .split(",")
-      .map(Number)
-      .filter((n) => !isNaN(n) && n > 0);
-    const parsedCassette = cassetteInput
-      .split(",")
-      .map(Number)
-      .filter((n) => !isNaN(n) && n > 0);
-    const parsedWheelDiameter = Number(wheelDiameterMm);
-    const parsedCadence = Number(cadence);
-
-    // Базовая валидация (можно расширить)
-    if (
-      parsedChainrings.length === 0 ||
-      parsedCassette.length === 0 ||
-      isNaN(parsedWheelDiameter) ||
-      parsedWheelDiameter <= 0 ||
-      isNaN(parsedCadence) ||
-      parsedCadence <= 0
-    ) {
-      alert("Пожалуйста, введите корректные данные для всех полей!");
-      return;
-    }
-
-    // Вызываем колбэк с собранными и отпарсенными данными
-    onCalculate({
-      chainrings: parsedChainrings,
-      cassette: parsedCassette,
-      wheelDiameter: parsedWheelDiameter,
-      cadence: parsedCadence,
+  // Helper для обновления части состояния
+  const updateFormData = (key: keyof CalculatorInputData, value: any) => {
+    onFormChange({
+      ...initialFormData,
+      [key]: value,
     });
   };
 
+  // Эффект для установки customWheelDiameter при изменении wheelSizeOption
+  useEffect(() => {
+    let newWheelDiameter = initialFormData.wheelDiameter; // Сохраняем текущее, если не меняется
+    let wheelSizeOption = "custom"; // Определяем опцию на основе diameter
+
+    switch (initialFormData.wheelDiameter) {
+      case 622:
+        if (initialFormData.chainrings[0] === 50)
+          wheelSizeOption = "700c"; // Пытаемся угадать 700c или 29
+        else wheelSizeOption = "29";
+        break;
+      case 584:
+        wheelSizeOption = "27.5";
+        break;
+      case 559:
+        wheelSizeOption = "26";
+        break;
+      default:
+        wheelSizeOption = "custom"; // Если не стандартный
+    }
+
+    // Это состояние теперь хранится внутри CalculatorInputForm,
+    // но его можно было бы тоже поднять в App.tsx, если бы была необходимость
+    // сохранять выбранную опцию колеса (700c, 29, custom) между сессиями.
+    // Пока оставим его локальным для удобства.
+    const currentWheelOption =
+      initialFormData.wheelDiameter === 622
+        ? initialFormData.chainrings[0] === 50
+          ? "700c"
+          : "29"
+        : initialFormData.wheelDiameter === 584
+        ? "27.5"
+        : initialFormData.wheelDiameter === 559
+        ? "26"
+        : "custom";
+
+    // Для выбора radio-кнопки по текущему значению wheelDiameter
+    // Эта логика немного сложна, потому что Radio-кнопки не имеют "value" как Input
+    // VKUI Radio требует, чтобы checked управлялся извне.
+    // Поэтому мы будем вычислять 'wheelSizeOption' на основе initialFormData.wheelDiameter
+    // и затем использовать это для установки checked.
+    // Если пользователь выберет Radio, мы обновим wheelDiameter и
+    // при необходимости переключим его в 'custom', если он введет что-то другое.
+  }, [initialFormData.wheelDiameter, initialFormData.chainrings]); // Зависит от wheelDiameter и chainrings для определения 700c/29
+
+  const handleWheelSizeOptionChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const selectedOption = e.target.value;
+    let newWheelDiameter = initialFormData.wheelDiameter; // Сохраняем текущее, если не стандартное
+
+    switch (selectedOption) {
+      case "700c":
+        newWheelDiameter = 622;
+        break;
+      case "29":
+        newWheelDiameter = 622;
+        break;
+      case "27.5":
+        newWheelDiameter = 584;
+        break;
+      case "26":
+        newWheelDiameter = 559;
+        break;
+      // В случае 'custom', ничего не меняем, пользователь вводит вручную
+    }
+    updateFormData("wheelDiameter", newWheelDiameter);
+  };
+
+  const handleFormCalculate = () => {
+    const chainrings = initialFormData.chainrings;
+    const cassette = initialFormData.cassette;
+    const finalWheelDiameter = initialFormData.wheelDiameter;
+    const finalCadence = initialFormData.cadence;
+
+    const formData: CalculatorInputData = {
+      chainrings,
+      cassette,
+      wheelDiameter: finalWheelDiameter,
+      cadence: finalCadence,
+    };
+
+    console.log("Данные для расчета получены из формы:", formData);
+    onCalculate(formData);
+  };
+
+  // Вычисляем текущую выбранную опцию для радио-кнопок
+  const getSelectedWheelOption = (diameter: number): string => {
+    switch (diameter) {
+      case 622:
+        // 700c и 29" имеют одинаковый ETRTO 622.
+        // Для упрощения, можно считать 700c, если это изначально шоссейные звезды
+        // или 29" в другом случае. Это не идеально, но для выбора radio-кнопки достаточно.
+        return initialFormData.chainrings[0] === 50 ? "700c" : "29";
+      case 584:
+        return "27.5";
+      case 559:
+        return "26";
+      default:
+        return "custom";
+    }
+  };
+  const currentWheelSizeOption = getSelectedWheelOption(
+    initialFormData.wheelDiameter
+  );
+
   return (
-    <Group header={<Title level="2">Ввод данных</Title>}>
-      <FormLayoutGroup mode="vertical">
-        <FormItem
-          top="Передние звезды (кол-во зубьев, через запятую)"
-          htmlFor="chainrings"
+    <Group
+      mode="card"
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleFormCalculate();
+      }}
+    >
+      <FormItem
+        top="Передние звезды (зубья, через запятую)"
+        htmlFor="chainrings"
+      >
+        <Textarea
+          id="chainrings"
+          value={initialFormData.chainrings.join(",")} // Используем значение из пропсов
+          onChange={(e) =>
+            updateFormData(
+              "chainrings",
+              e.target.value
+                .split(",")
+                .map(Number)
+                .filter((n) => !isNaN(n))
+            )
+          } // Обновляем через onFormChange
+          placeholder="Например: 50,34"
+        />
+      </FormItem>
+
+      <FormItem top="Задние звезды (зубья, через запятую)" htmlFor="cassette">
+        <Textarea
+          id="cassette"
+          value={initialFormData.cassette.join(",")} // Используем значение из пропсов
+          onChange={(e) =>
+            updateFormData(
+              "cassette",
+              e.target.value
+                .split(",")
+                .map(Number)
+                .filter((n) => !isNaN(n))
+            )
+          } // Обновляем через onFormChange
+          placeholder="Например: 11,12,13,14,15,17,19,21,23,25,28,32"
+        />
+      </FormItem>
+
+      <FormItem top="Размер колеса">
+        <Radio
+          name="wheelSize"
+          value="700c"
+          checked={currentWheelSizeOption === "700c"}
+          onChange={handleWheelSizeOptionChange}
         >
-          <Textarea
-            id="chainrings"
-            value={chainringsInput}
-            onChange={(e) => setChainringsInput(e.target.value)}
-            placeholder="Например: 28,30,42"
-          />
-        </FormItem>
-
-        <FormItem
-          top="Задние звезды (кол-во зубьев, через запятую)"
-          htmlFor="cassette"
+          700c (шоссе)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="29"
+          checked={currentWheelSizeOption === "29"}
+          onChange={handleWheelSizeOptionChange}
         >
-          <Textarea
-            id="cassette"
-            value={cassetteInput}
-            onChange={(e) => setCassetteInput(e.target.value)}
-            placeholder="Например: 11,13,15,18,21,24,28,32,36,40,46"
-          />
-        </FormItem>
+          29" (MTB)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="27.5"
+          checked={currentWheelSizeOption === "27.5"}
+          onChange={handleWheelSizeOptionChange}
+        >
+          27.5" (MTB / 650B)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="26"
+          checked={currentWheelSizeOption === "26"}
+          onChange={handleWheelSizeOptionChange}
+        >
+          26" (MTB)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="custom"
+          checked={currentWheelSizeOption === "custom"}
+          onChange={handleWheelSizeOptionChange}
+        >
+          Свой (ETRTO диаметр обода в мм)
+        </Radio>
+      </FormItem>
 
-        <FormItem top="Диаметр колеса (в мм)" htmlFor="wheelDiameter">
+      {currentWheelSizeOption === "custom" && (
+        <FormItem top="Диаметр обода ETRTO (мм)">
           <Input
-            id="wheelDiameter"
             type="number"
-            value={wheelDiameterMm}
-            onChange={(e) => setWheelDiameterMm(e.target.value)}
-            placeholder="Например: 700 (для 700с)"
+            value={initialFormData.wheelDiameter.toString()} // Используем значение из пропсов
+            onChange={(e) =>
+              updateFormData("wheelDiameter", parseInt(e.target.value, 10))
+            } // Обновляем через onFormChange
+            placeholder="Например: 622"
           />
         </FormItem>
+      )}
 
-        <FormItem top="Каденс (об/мин)" htmlFor="cadence">
+      <FormItem top="Каденс (об/мин)">
+        <Header
+          mode="primary"
+          style={{ display: "flex", alignItems: "center" }}
+        >
+          <Text>{initialFormData.cadence} об/мин</Text>{" "}
+          {/* Используем значение из пропсов */}
+        </Header>
+        <Slider
+          min={30}
+          max={120}
+          step={1}
+          value={initialFormData.cadence} // Используем значение из пропсов
+          onChange={(value) => updateFormData("cadence", value)} // Обновляем через onFormChange
+        />
+        <Div>
           <Input
-            id="cadence"
             type="number"
-            value={cadence}
-            onChange={(e) => setCadence(e.target.value)}
-            placeholder="Например: 90"
+            value={initialFormData.cadence} // Используем значение из пропсов
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (!isNaN(value)) {
+                updateFormData("cadence", value); // Обновляем через onFormChange
+              }
+            }}
+            style={{ width: "80px", marginTop: "10px" }}
           />
-        </FormItem>
-      </FormLayoutGroup>
-      <Spacing size={16} />
-      <Cell>
-        <Button size="l" stretched onClick={handleCalculate}>
-          Рассчитать
+        </Div>
+      </FormItem>
+
+      <FormItem>
+        <Button size="l" stretched onClick={handleFormCalculate}>
+          Рассчитать передачи
         </Button>
-      </Cell>
+      </FormItem>
     </Group>
   );
 };

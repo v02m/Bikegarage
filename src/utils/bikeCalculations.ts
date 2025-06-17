@@ -1,162 +1,82 @@
 // src/utils/bikeCalculations.ts
 
-// Константы
-const PI = Math.PI; // Число Пи
-const INCHES_PER_MM = 0.0393701; // 1 мм = 0.0393701 дюймов
-const METERS_PER_KM = 1000; // 1 км = 1000 метров
-const SECONDS_PER_HOUR = 3600; // 1 час = 3600 секунд
-
-// Интерфейс для результатов расчета одной комбинации передач
 export interface GearCalculation {
   frontTeeth: number;
   rearTeeth: number;
-  gearRatio: number; // Передаточное отношение
-  development: number; // Развитие (дистанция за один оборот педалей), метры/оборот
-  gearInches: number; // Дюймы за один оборот педалей (Gear Inches)
-  speedKmh: number; // Скорость при заданном каденсе, км/ч
-  speedMph: number; // Скорость при заданном каденсе, миль/ч
+  gearRatio: number; // Передаточное отношение (передние/задние)
+  development: number; // Развитие (метры за один оборот педалей)
+  speedKmh: number; // Скорость в км/ч
+  gearInches: number; // Gear Inches
 }
 
-// Интерфейс для всех результатов расчета
 export interface AllGearCalculations {
   chainrings: number[];
   cassette: number[];
-  wheelCircumferenceMm: number; // Окружность колеса в мм
+  wheelDiameter: number; // Диаметр колеса в мм
+  wheelCircumferenceMm: number; // Длина окружности колеса в мм
   cadence: number; // Каденс в об/мин
-  results: GearCalculation[]; // Массив результатов для всех комбинаций
+  results: GearCalculation[]; // Массив всех комбинаций передач
 }
 
 /**
- * Рассчитывает окружность колеса на основе диаметра.
- * @param wheelDiameterMm Диаметр колеса в миллиметрах.
- * @returns Окружность колеса в миллиметрах.
+ * Выполняет расчеты для всех комбинаций передач.
+ * @param chainrings Массив чисел зубьев передних звезд.
+ * @param cassette Массив чисел зубьев задних звезд.
+ * @param wheelDiameterMm Диаметр колеса в миллиметрах (ETRTO диаметр обода + 2 * высота покрышки).
+ * @param cadenceRpm Каденс в оборотах в минуту.
+ * @returns Объект AllGearCalculations с полной информацией.
  */
-export const calculateWheelCircumference = (
-  wheelDiameterMm: number
-): number => {
-  return wheelDiameterMm * PI;
-};
-
-/**
- * Рассчитывает передаточное отношение.
- * @param frontTeeth Количество зубьев передней звезды.
- * @param rearTeeth Количество зубьев задней звезды.
- * @returns Передаточное отношение (front / rear).
- */
-export const calculateGearRatio = (
-  frontTeeth: number,
-  rearTeeth: number
-): number => {
-  if (rearTeeth === 0) {
-    // Избегаем деления на ноль
-    return 0; // Или можно бросить ошибку, в зависимости от желаемого поведения
-  }
-  return frontTeeth / rearTeeth;
-};
-
-/**
- * Рассчитывает развитие (Development) - расстояние, пройденное за один оборот педалей.
- * @param gearRatio Передаточное отношение.
- * @param wheelCircumferenceMm Окружность колеса в миллиметрах.
- * @returns Расстояние в метрах за один оборот педалей.
- */
-export const calculateDevelopment = (
-  gearRatio: number,
-  wheelCircumferenceMm: number
-): number => {
-  // Развитие = (передаточное отношение) * (окружность колеса в мм)
-  // Результат в мм, делим на 1000, чтобы получить метры
-  return (gearRatio * wheelCircumferenceMm) / 1000;
-};
-
-/**
- * Рассчитывает Gear Inches - устаревший, но часто используемый показатель.
- * @param gearRatio Передаточное отношение.
- * @param wheelDiameterMm Диаметр колеса в миллиметрах.
- * @returns Gear Inches (дюймы за один оборот педалей).
- */
-export const calculateGearInches = (
-  gearRatio: number,
-  wheelDiameterMm: number
-): number => {
-  // Gear Inches = (передаточное отношение) * (диаметр колеса в дюймах)
-  // Переводим диаметр из мм в дюймы
-  const wheelDiameterInches = wheelDiameterMm * INCHES_PER_MM;
-  return gearRatio * wheelDiameterInches;
-};
-
-/**
- * Рассчитывает скорость.
- * @param development Расстояние за один оборот педалей в метрах.
- * @param cadence Каденс (оборотов педалей в минуту).
- * @returns Скорость в км/ч.
- */
-export const calculateSpeedKmh = (
-  development: number,
-  cadence: number
-): number => {
-  // Расстояние за 1 минуту (метры/мин) = development (метры/оборот) * cadence (обороты/мин)
-  const speedMetersPerMinute = development * cadence;
-  // Расстояние за 1 час (метры/час) = speedMetersPerMinute * 60
-  const speedMetersPerHour = speedMetersPerMinute * 60;
-  // Скорость в км/ч = speedMetersPerHour / 1000
-  return speedMetersPerHour / METERS_PER_KM;
-};
-
-/**
- * Рассчитывает скорость в милях/ч.
- * @param speedKmh Скорость в км/ч.
- * @returns Скорость в милях/ч.
- */
-export const convertKmhToMph = (speedKmh: number): number => {
-  return speedKmh * 0.621371; // 1 км = 0.621371 миль
-};
-
-/**
- * Главная функция для выполнения всех расчетов передач.
- * @param chainrings Массив зубьев передних звезд.
- * @param cassette Массив зубьев задних звезд.
- * @param wheelDiameterMm Диаметр колеса в миллиметрах.
- * @param cadence Каденс (оборотов педалей в минуту).
- * @returns Объект AllGearCalculations со всеми результатами.
- */
-export const performGearCalculations = (
+export function performGearCalculations(
   chainrings: number[],
   cassette: number[],
   wheelDiameterMm: number,
-  cadence: number
-): AllGearCalculations => {
-  const allResults: GearCalculation[] = [];
-  const wheelCircumferenceMm = calculateWheelCircumference(wheelDiameterMm);
+  cadenceRpm: number
+): AllGearCalculations {
+  const results: GearCalculation[] = [];
+
+  // Константа PI
+  const PI = Math.PI;
+
+  // Длина окружности колеса в мм
+  const wheelCircumferenceMm = wheelDiameterMm * PI;
 
   chainrings.forEach((frontTeeth) => {
     cassette.forEach((rearTeeth) => {
-      const gearRatio = calculateGearRatio(frontTeeth, rearTeeth);
-      const development = calculateDevelopment(gearRatio, wheelCircumferenceMm);
-      const gearInches = calculateGearInches(gearRatio, wheelDiameterMm);
-      const speedKmh = calculateSpeedKmh(development, cadence);
-      const speedMph = convertKmhToMph(speedKmh);
+      const gearRatio = frontTeeth / rearTeeth; // Передаточное отношение
 
-      allResults.push({
-        frontTeeth,
-        rearTeeth,
-        gearRatio: parseFloat(gearRatio.toFixed(2)), // Округляем до 2 знаков после запятой
-        development: parseFloat(development.toFixed(2)), // Округляем до 2 знаков
-        gearInches: parseFloat(gearInches.toFixed(2)), // Округляем до 2 знаков
-        speedKmh: parseFloat(speedKmh.toFixed(1)), // Округляем до 1 знака
-        speedMph: parseFloat(speedMph.toFixed(1)), // Округляем до 1 знака
+      // Развитие (development) в метрах
+      // (длина окружности колеса в мм * передаточное отношение) / 1000 для перевода в метры
+      const development = (wheelCircumferenceMm * gearRatio) / 1000;
+
+      // Скорость в км/ч
+      // (развитие в м/об * каденс об/мин * 60 мин/час) / 1000 м/км
+      const speedKmh = (development * cadenceRpm * 60) / 1000;
+
+      // Gear Inches (передаточное отношение * диаметр колеса в дюймах)
+      // wheelDiameterMm / 25.4 для перевода мм в дюймы
+      const wheelDiameterInches = wheelDiameterMm / 25.4;
+      const gearInches = gearRatio * wheelDiameterInches;
+
+      results.push({
+        frontTeeth: frontTeeth,
+        rearTeeth: rearTeeth,
+        gearRatio: parseFloat(gearRatio.toFixed(2)),
+        development: parseFloat(development.toFixed(2)),
+        speedKmh: parseFloat(speedKmh.toFixed(2)),
+        gearInches: parseFloat(gearInches.toFixed(2)),
       });
     });
   });
 
-  // Сортируем результаты по передаточному отношению (от самого низкого к самому высокому)
-  allResults.sort((a, b) => a.gearRatio - b.gearRatio);
+  // Сортируем результаты по передаточному отношению для лучшего отображения на графике
+  results.sort((a, b) => a.gearRatio - b.gearRatio);
 
   return {
-    chainrings,
-    cassette,
+    chainrings: chainrings,
+    cassette: cassette,
+    wheelDiameter: wheelDiameterMm,
     wheelCircumferenceMm: parseFloat(wheelCircumferenceMm.toFixed(2)),
-    cadence,
-    results: allResults,
+    cadence: cadenceRpm,
+    results: results,
   };
-};
+}

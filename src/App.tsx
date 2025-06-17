@@ -1,97 +1,138 @@
+// src/App.tsx
 import React, { useState, useEffect } from "react";
+import bridge from "@vkontakte/vk-bridge";
 import {
+  View,
+  AdaptivityProvider,
   AppRoot,
+  ConfigProvider,
   SplitLayout,
   SplitCol,
-  View,
+  Panel,
+  Group,
+  Cell,
+  Button,
   PanelHeader,
-  usePlatform,
 } from "@vkontakte/vkui";
 import "@vkontakte/vkui/dist/vkui.css";
 
-import bridge from "@vkontakte/vk-bridge";
-import type { VKBridgeEvent } from "@vkontakte/vk-bridge";
-
-// Импортируем наши компоненты из их папок
 import HomePanel from "./components/HomePanel";
 import CalculatorPanel from "./components/CalculatorPanel";
 import GearRatioResultPanel from "./components/GearRatioResultPanel";
 
-// Импортируем тип CalculatorInputData из CalculatorInputForm
 import type { CalculatorInputData } from "./components/CalculatorPanel/CalculatorInputForm";
 
-const App: React.FC = () => {
-  const platform = usePlatform();
-  const [activePanel, setActivePanel] = useState("home"); // Управляет активной панелью
+// --- Заглушки для новых панелей ---
+const TheoryPanel: React.FC<{
+  id: string;
+  setActivePanel: (panelId: string) => void;
+}> = ({ id, setActivePanel }) => (
+  <Panel id={id}>
+    <PanelHeader>Энциклопедия Велосипеда</PanelHeader>
+    <Group>
+      <Cell>Здесь будет глоссарий и статьи по теории велосипеда.</Cell>
+      <Cell>
+        <Button onClick={() => setActivePanel("home")}>На главную</Button>
+      </Cell>
+    </Group>
+  </Panel>
+);
 
-  const [scheme, setScheme] = useState<string | null>(null);
-  // Состояние для хранения данных калькулятора, которые будут передаваться между панелями
-  const [calculatorInput, setCalculatorInput] =
+const MyBikePanel: React.FC<{
+  id: string;
+  setActivePanel: (panelId: string) => void;
+}> = ({ id, setActivePanel }) => (
+  <Panel id={id}>
+    <PanelHeader>Мой Байк</PanelHeader>
+    <Group>
+      <Cell>
+        Здесь будет информация о вашем велосипеде, компонентах и апгрейдах.
+      </Cell>
+      <Cell>
+        <Button onClick={() => setActivePanel("home")}>На главную</Button>
+      </Cell>
+    </Group>
+  </Panel>
+);
+
+const WorkshopsPanel: React.FC<{
+  id: string;
+  setActivePanel: (panelId: string) => void;
+}> = ({ id, setActivePanel }) => (
+  <Panel id={id}>
+    <PanelHeader>Веломастерские</PanelHeader>
+    <Group>
+      <Cell>Здесь будет список веломастерских.</Cell>
+      <Cell>
+        <Button onClick={() => setActivePanel("home")}>На главную</Button>
+      </Cell>
+    </Group>
+  </Panel>
+);
+// --- Конец заглушек ---
+
+const App = () => {
+  const [activePanel, setActivePanel] = useState("home");
+  const [fetchedUser, setUser] = useState(null);
+  const [scheme, setScheme] = useState("vkcom_light");
+
+  // --- НОВОЕ СОСТОЯНИЕ ДЛЯ КАЛЬКУЛЯТОРА ---
+  const [calculatorFormData, setCalculatorFormData] =
+    useState<CalculatorInputData>({
+      chainrings: [30, 32], // <-- Начальные значения
+      cassette: [11, 12, 13, 14, 15, 17, 19, 21, 23, 25, 28, 32], // <-- Начальные значения
+      wheelDiameter: 622, // <-- ETRTO for 700c (дорожный)
+      cadence: 90,
+    });
+  // --- КОНЕЦ НОВОГО СОСТОЯНИЯ ---
+
+  const [calculatedData, setCalculatedData] =
     useState<CalculatorInputData | null>(null);
-  // Состояние для хранения РАССЧИТАННЫХ данных, которые передаются на экран результатов
-  const [calculatedResultsData, setCalculatedResultsData] =
-    useState<CalculatorInputData | null>(null);
 
-  useEffect(() => {
-    bridge.send("VKWebAppInit");
-
-    const handleUpdateConfig = (event: VKBridgeEvent<any>) => {
-      // eslint-disable-line @typescript-eslint/no-explicit-any
-      if (event.detail.type === "VKWebAppUpdateConfig") {
-        const data = event.detail.data as { scheme?: string };
-        if (data.scheme) {
-          setScheme(data.scheme);
-        }
-      }
-    };
-
-    bridge.subscribe(handleUpdateConfig);
-
-    return () => {
-      bridge.unsubscribe(handleUpdateConfig);
-    };
-  }, []);
-
-  const currentScheme = scheme || "vkcom_light";
-  const header =
-    platform !== "vkcom" ? <PanelHeader delimiter="none" /> : undefined;
-
-  // Эта функция теперь отвечает за:
-  // 1. Сохранение введенных значений формы в состояние `calculatorInput` (для сохранения на сессию)
-  // 2. Сохранение этих же значений в `calculatedResultsData` (для передачи на экран результатов)
-  // 3. Переход на панель результатов
-  const handleCalculateAndNavigate = (data: CalculatorInputData) => {
-    setCalculatorInput(data); // Сохраняем введенные данные
-    setCalculatedResultsData(data); // Передаем эти же данные для расчетов на странице результатов
-    setActivePanel("gear_results"); // Переходим на панель результатов
+  const goToResults = (data: CalculatorInputData) => {
+    // При расчете, сохраняем данные и переходим на панель результатов
+    setCalculatedData(data);
+    setActivePanel("results");
   };
 
+  useEffect(() => {
+    // fetchData(); // Закомментируем, если не используем bridge активно для дебага
+  }, []);
+
   return (
-    <AppRoot>
-      <SplitLayout header={header}>
-        <SplitCol autoSpaced>
-          <View activePanel={activePanel}>
-            {/* HomePanel просто переключает активную панель */}
-            <HomePanel id="home" setActivePanel={setActivePanel} />
-
-            {/* CalculatorPanel принимает функцию, которая получает данные и меняет панель,
-                а также передает начальные значения для формы */}
-            <CalculatorPanel
-              id="calculator"
-              onCalculateAndNavigate={handleCalculateAndNavigate}
-              initialValues={calculatorInput} // Передаем сохраненные значения
-            />
-
-            {/* GearRatioResultPanel принимает сохраненные данные для отображения и расчетов */}
-            <GearRatioResultPanel
-              id="gear_results"
-              setActivePanel={setActivePanel} // Передаем setActivePanel для кнопки "Назад"
-              calculatedData={calculatedResultsData} // Передаем данные для расчетов
-            />
-          </View>
-        </SplitCol>
-      </SplitLayout>
-    </AppRoot>
+    <ConfigProvider scheme={scheme}>
+      <AdaptivityProvider>
+        <AppRoot>
+          <SplitLayout>
+            <SplitCol autoSpaced>
+              <View activePanel={activePanel}>
+                <HomePanel id="home" setActivePanel={setActivePanel} />
+                <CalculatorPanel
+                  id="calculator"
+                  setActivePanel={setActivePanel}
+                  onCalculate={goToResults}
+                  // --- ПЕРЕДАЁМ НОВОЕ СОСТОЯНИЕ В КАЛЬКУЛЯТОР ---
+                  initialFormData={calculatorFormData}
+                  onFormChange={setCalculatorFormData}
+                />
+                <GearRatioResultPanel
+                  id="results"
+                  setActivePanel={setActivePanel}
+                  calculatedData={calculatedData}
+                />
+                {/* Новые заглушки панелей */}
+                <TheoryPanel id="theory" setActivePanel={setActivePanel} />
+                <MyBikePanel id="mybike" setActivePanel={setActivePanel} />
+                <WorkshopsPanel
+                  id="workshops"
+                  setActivePanel={setActivePanel}
+                />
+              </View>
+            </SplitCol>
+          </SplitLayout>
+        </AppRoot>
+      </AdaptivityProvider>
+    </ConfigProvider>
   );
 };
 
