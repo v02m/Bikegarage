@@ -13,14 +13,14 @@ import {
   Cell,
   Button,
   PanelHeader,
-} from "@vkontakte/vkui"; // <-- Добавляем Panel, Group, Cell, Button, PanelHeader для заглушек
+} from "@vkontakte/vkui";
 import "@vkontakte/vkui/dist/vkui.css";
 
 import HomePanel from "./components/HomePanel";
 import CalculatorPanel from "./components/CalculatorPanel";
 import GearRatioResultPanel from "./components/GearRatioResultPanel";
 
-import type { CalculatorInputData } from "./components/CalculatorPanel/CalculatorInputForm"; // <-- Важно: импортируем тип для данных калькулятора
+import type { CalculatorInputData } from "./components/CalculatorPanel/CalculatorInputForm";
 
 // --- Заглушки для новых панелей ---
 const TheoryPanel: React.FC<{
@@ -73,24 +73,29 @@ const WorkshopsPanel: React.FC<{
 
 const App = () => {
   const [activePanel, setActivePanel] = useState("home");
-  const [fetchedUser, setUser] = useState(null); // Пока не используем, но держим
-  const [scheme, setScheme] = useState("vkcom_light"); // Можно менять тему
+  const [fetchedUser, setUser] = useState(null);
+  const [scheme, setScheme] = useState("vkcom_light");
 
-  // Для перехода на панель результатов после расчета
+  // --- НОВОЕ СОСТОЯНИЕ ДЛЯ КАЛЬКУЛЯТОРА ---
+  const [calculatorFormData, setCalculatorFormData] =
+    useState<CalculatorInputData>({
+      chainrings: [30, 32], // <-- Начальные значения
+      cassette: [11, 12, 13, 14, 15, 17, 19, 21, 23, 25, 28, 32], // <-- Начальные значения
+      wheelDiameter: 622, // <-- ETRTO for 700c (дорожный)
+      cadence: 90,
+    });
+  // --- КОНЕЦ НОВОГО СОСТОЯНИЯ ---
+
   const [calculatedData, setCalculatedData] =
     useState<CalculatorInputData | null>(null);
 
   const goToResults = (data: CalculatorInputData) => {
+    // При расчете, сохраняем данные и переходим на панель результатов
     setCalculatedData(data);
     setActivePanel("results");
   };
 
   useEffect(() => {
-    async function fetchData() {
-      // Это для VK Mini App специфичных вызовов
-      // const user = await bridge.send('VKWebAppGetUserInfo');
-      // setUser(user);
-    }
     // fetchData(); // Закомментируем, если не используем bridge активно для дебага
   }, []);
 
@@ -106,6 +111,9 @@ const App = () => {
                   id="calculator"
                   setActivePanel={setActivePanel}
                   onCalculate={goToResults}
+                  // --- ПЕРЕДАЁМ НОВОЕ СОСТОЯНИЕ В КАЛЬКУЛЯТОР ---
+                  initialFormData={calculatorFormData}
+                  onFormChange={setCalculatorFormData}
                 />
                 <GearRatioResultPanel
                   id="results"

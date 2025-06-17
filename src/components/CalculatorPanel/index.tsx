@@ -4,30 +4,38 @@ import { Panel, PanelHeader, Group, Cell, Button } from "@vkontakte/vkui";
 
 import CalculatorInputForm, {
   type CalculatorInputData,
-} from "./CalculatorInputForm"; // <-- Важно: импортируем тип!
+} from "./CalculatorInputForm";
 
 interface CalculatorPanelProps {
   id: string;
   setActivePanel: (panelId: string) => void;
-  onCalculate: (data: CalculatorInputData) => void; // <- Пропс для передачи данных в App.tsx
+  onCalculate: (data: CalculatorInputData) => void;
+  // --- НОВЫЕ ПРОПСЫ ---
+  initialFormData: CalculatorInputData;
+  onFormChange: (data: CalculatorInputData) => void;
 }
 
 const CalculatorPanel: React.FC<CalculatorPanelProps> = ({
   id,
   setActivePanel,
   onCalculate,
+  initialFormData,
+  onFormChange,
 }) => {
   const handleCalculate = (data: CalculatorInputData) => {
-    // Эта функция вызывается, когда CalculatorInputForm завершил расчет
-    onCalculate(data); // Передаем данные наверх в App.tsx для сохранения и отображения в ResultPanel
+    onCalculate(data);
   };
 
   return (
     <Panel id={id}>
       <PanelHeader>Калькулятор передач</PanelHeader>
       <Group>
-        {/* Передаем функцию handleCalculate как пропс onCalculate в CalculatorInputForm */}
-        <CalculatorInputForm onCalculate={handleCalculate} />
+        {/* ПЕРЕДАЕМ НОВЫЕ ПРОПСЫ В CalculatorInputForm */}
+        <CalculatorInputForm
+          onCalculate={handleCalculate}
+          initialFormData={initialFormData} // <-- Передаем
+          onFormChange={onFormChange} // <-- Передаем
+        />
       </Group>
       <Group>
         <Cell>
