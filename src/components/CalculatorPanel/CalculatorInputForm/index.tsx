@@ -1,19 +1,20 @@
 // src/components/CalculatorPanel/CalculatorInputForm/index.tsx
-import React, { useState, useEffect } from "react"; // Добавлен useEffect
+import React, { useState, useEffect } from "react";
 import {
   Group,
-  FormLayoutGroup,
-  FormItem,
   Input,
-  Textarea,
   Button,
-  Title,
-  Spacing,
-  Cell,
+  FormItem,
+  Textarea,
+  Radio,
+  SimpleCell,
+  Slider,
+  Header,
+  Div,
+  Text,
 } from "@vkontakte/vkui";
 
-// Определение типов данных, которые будет возвращать форма
-// Экспортируем CalculatorInputData, чтобы другие компоненты могли его импортировать
+// Тип данных, которые будет возвращать форма
 export interface CalculatorInputData {
   chainrings: number[];
   cassette: number[];
@@ -21,125 +22,183 @@ export interface CalculatorInputData {
   cadence: number;
 }
 
-// Определение пропсов для компонента формы
 interface CalculatorInputFormProps {
-  onCalculate: (data: CalculatorInputData) => void;
-  initialValues: CalculatorInputData | null; // Новый пропс для начальных значений
+  onCalculate: (data: CalculatorInputData) => void; // <-- Вот он, onCalculate
 }
 
 const CalculatorInputForm: React.FC<CalculatorInputFormProps> = ({
   onCalculate,
-  initialValues,
 }) => {
-  // Состояния для входных данных калькулятора
-  const [chainringsInput, setChainringsInput] = useState(
-    "28,30,32,34,36,38,40,42"
-  ); // Передние звезды, через запятую
+  const [chainringsInput, setChainringsInput] = useState("30,32");
   const [cassetteInput, setCassetteInput] = useState(
-    "10,11,13,15,18,21,24,28,32,36,40,46,48,50,52"
-  ); // Задние звезды, через запятую
-  const [wheelDiameterMm, setWheelDiameterMm] = useState("700"); // Диаметр колеса в мм
-  const [cadence, setCadence] = useState("90"); // Каденс в об/мин
+    "11,12,13,14,15,17,19,21,23,25,28,32"
+  );
+  const [wheelSizeOption, setWheelSizeOption] = useState("700c"); // '700c', '29', '27.5', '26', 'custom'
+  const [customWheelDiameter, setCustomWheelDiameter] = useState("622"); // ETRTO 622 for 700c
+  const [cadence, setCadence] = useState(90); // Default cadence
 
-  // Используем useEffect для установки начальных значений, если они были переданы
+  // Обновляем customWheelDiameter при изменении wheelSizeOption
   useEffect(() => {
-    if (initialValues) {
-      setChainringsInput(initialValues.chainrings.join(","));
-      setCassetteInput(initialValues.cassette.join(","));
-      setWheelDiameterMm(String(initialValues.wheelDiameter)); // Число в строку
-      setCadence(String(initialValues.cadence)); // Число в строку
+    switch (wheelSizeOption) {
+      case "700c":
+        setCustomWheelDiameter("622"); // ETRTO for 700c (road)
+        break;
+      case "29":
+        setCustomWheelDiameter("622"); // ETRTO for 29" (MTB)
+        break;
+      case "27.5":
+        setCustomWheelDiameter("584"); // ETRTO for 27.5" / 650B
+        break;
+      case "26":
+        setCustomWheelDiameter("559"); // ETRTO for 26"
+        break;
+      // 'custom' case doesn't change customWheelDiameter automatically
     }
-  }, [initialValues]); // Эффект срабатывает при изменении initialValues
+  }, [wheelSizeOption]);
 
-  // Функция для обработки расчета
-  const handleCalculate = () => {
-    // Парсинг входных данных
-    const parsedChainrings = chainringsInput
+  const handleFormCalculate = () => {
+    const chainrings = chainringsInput
       .split(",")
       .map(Number)
-      .filter((n) => !isNaN(n) && n > 0);
-    const parsedCassette = cassetteInput
+      .filter((n) => !isNaN(n));
+    const cassette = cassetteInput
       .split(",")
       .map(Number)
-      .filter((n) => !isNaN(n) && n > 0);
-    const parsedWheelDiameter = Number(wheelDiameterMm);
-    const parsedCadence = Number(cadence);
+      .filter((n) => !isNaN(n));
+    const finalWheelDiameter = parseInt(customWheelDiameter, 10);
 
-    // Базовая валидация (можно расширить)
-    if (
-      parsedChainrings.length === 0 ||
-      parsedCassette.length === 0 ||
-      isNaN(parsedWheelDiameter) ||
-      parsedWheelDiameter <= 0 ||
-      isNaN(parsedCadence) ||
-      parsedCadence <= 0
-    ) {
-      alert("Пожалуйста, введите корректные данные для всех полей!");
-      return;
-    }
+    const formData: CalculatorInputData = {
+      chainrings,
+      cassette,
+      wheelDiameter: finalWheelDiameter,
+      cadence: cadence,
+    };
 
-    // Вызываем колбэк с собранными и отпарсенными данными
-    onCalculate({
-      chainrings: parsedChainrings,
-      cassette: parsedCassette,
-      wheelDiameter: parsedWheelDiameter,
-      cadence: parsedCadence,
-    });
+    console.log("Данные для расчета получены из формы:", formData);
+    // Вызываем пропс onCalculate, передавая ему собранные данные
+    onCalculate(formData); // <--- Вот здесь был onCalculateAndNavigate
   };
 
   return (
-    <Group header={<Title level="2">Ввод данных</Title>}>
-      <FormLayoutGroup mode="vertical">
-        <FormItem
-          top="Передние звезды (кол-во зубьев, через запятую)"
-          htmlFor="chainrings"
+    // <FormLayout
+    //   onSubmit={(e) => {
+    //     e.preventDefault();
+    //     handleFormCalculate();
+    //   }}
+    // >
+    <Group
+      mode="card"
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleFormCalculate();
+      }}
+    >
+      {" "}
+      {/* <--- Изменил с FormLayout на Group */}
+      <FormItem
+        top="Передние звезды (зубья, через запятую)"
+        htmlFor="chainrings"
+      >
+        <Textarea
+          id="chainrings"
+          value={chainringsInput}
+          onChange={(e) => setChainringsInput(e.target.value)}
+          placeholder="Например: 50,34"
+        />
+      </FormItem>
+      <FormItem top="Задние звезды (зубья, через запятую)" htmlFor="cassette">
+        <Textarea
+          id="cassette"
+          value={cassetteInput}
+          onChange={(e) => setCassetteInput(e.target.value)}
+          placeholder="Например: 11,12,13,14,15,17,19,21,23,25,28,32"
+        />
+      </FormItem>
+      <FormItem top="Размер колеса">
+        <Radio
+          name="wheelSize"
+          value="700c"
+          checked={wheelSizeOption === "700c"}
+          onChange={(e) => setWheelSizeOption(e.target.value)}
         >
-          <Textarea
-            id="chainrings"
-            value={chainringsInput}
-            onChange={(e) => setChainringsInput(e.target.value)}
-            placeholder="Например: 28,30,42"
-          />
-        </FormItem>
-
-        <FormItem
-          top="Задние звезды (кол-во зубьев, через запятую)"
-          htmlFor="cassette"
+          700c (шоссе)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="29"
+          checked={wheelSizeOption === "29"}
+          onChange={(e) => setWheelSizeOption(e.target.value)}
         >
-          <Textarea
-            id="cassette"
-            value={cassetteInput}
-            onChange={(e) => setCassetteInput(e.target.value)}
-            placeholder="Например: 11,13,15,18,21,24,28,32,36,40,46"
-          />
-        </FormItem>
-
-        <FormItem top="Диаметр колеса (в мм)" htmlFor="wheelDiameter">
+          29" (MTB)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="27.5"
+          checked={wheelSizeOption === "27.5"}
+          onChange={(e) => setWheelSizeOption(e.target.value)}
+        >
+          27.5" (MTB / 650B)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="26"
+          checked={wheelSizeOption === "26"}
+          onChange={(e) => setWheelSizeOption(e.target.value)}
+        >
+          26" (MTB)
+        </Radio>
+        <Radio
+          name="wheelSize"
+          value="custom"
+          checked={wheelSizeOption === "custom"}
+          onChange={(e) => setWheelSizeOption(e.target.value)}
+        >
+          Свой (ETRTO диаметр обода в мм)
+        </Radio>
+      </FormItem>
+      {wheelSizeOption === "custom" && (
+        <FormItem top="Диаметр обода ETRTO (мм)">
           <Input
-            id="wheelDiameter"
             type="number"
-            value={wheelDiameterMm}
-            onChange={(e) => setWheelDiameterMm(e.target.value)}
-            placeholder="Например: 700 (для 700с)"
+            value={customWheelDiameter}
+            onChange={(e) => setCustomWheelDiameter(e.target.value)}
+            placeholder="Например: 622"
           />
         </FormItem>
-
-        <FormItem top="Каденс (об/мин)" htmlFor="cadence">
+      )}
+      <FormItem top="Каденс (об/мин)">
+        <Header
+          mode="primary"
+          style={{ display: "flex", alignItems: "center" }}
+        >
+          <Text>{cadence} об/мин</Text>
+        </Header>
+        <Slider
+          min={30}
+          max={120}
+          step={1}
+          value={cadence}
+          onChange={setCadence}
+        />
+        <Div>
           <Input
-            id="cadence"
             type="number"
             value={cadence}
-            onChange={(e) => setCadence(e.target.value)}
-            placeholder="Например: 90"
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (!isNaN(value)) {
+                setCadence(value);
+              }
+            }}
+            style={{ width: "80px", marginTop: "10px" }}
           />
-        </FormItem>
-      </FormLayoutGroup>
-      <Spacing size={16} />
-      <Cell>
-        <Button size="l" stretched onClick={handleCalculate}>
-          Рассчитать
+        </Div>
+      </FormItem>
+      <FormItem>
+        <Button size="l" stretched onClick={handleFormCalculate}>
+          Рассчитать передачи
         </Button>
-      </Cell>
+      </FormItem>
     </Group>
   );
 };

@@ -10,6 +10,8 @@ import {
   SimpleCell,
   Text,
   Title,
+  Tooltip, // <-- Импортируем Tooltip
+  VisuallyHidden, // <-- Возможно пригодится для доступности, но можно и без него
 } from "@vkontakte/vkui";
 
 import type { CalculatorInputData } from "../CalculatorPanel/CalculatorInputForm";
@@ -43,13 +45,8 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
     );
   }, [calculatedData]);
 
-  // Функция, которую можно передать в GearChart, если понадобится,
-  // чтобы GearChart мог обновить calculatedData в родительском компоненте
   const handleChartCadenceChange = (newCadence: number) => {
     if (calculatedData) {
-      // Здесь можно обновить calculatedData, если нужно,
-      // или просто позволить GearChart управлять своим каденсом
-      // В данном случае, GearChart сам пересчитывает данные, так что можно не делать ничего здесь
       console.log("Каденс изменен в GearChart на:", newCadence);
     }
   };
@@ -113,12 +110,22 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
                     "1px solid var(--vkui--color_separator_primary)",
                 }}
               >
-                <th style={{ padding: "8px" }}>Перед</th>
-                <th style={{ padding: "8px" }}>Зад</th>
+                <th style={{ padding: "8px" }}>Передние звезды (Система)</th>
+                <th style={{ padding: "8px" }}>Задние звезды (Кассета)</th>
                 <th style={{ padding: "8px" }}>Передаточное</th>
-                <th style={{ padding: "8px" }}>Развитие (м)</th>
+                <th style={{ padding: "8px" }}>
+                  <Tooltip text="Расстояние, которое проезжает велосипед за один полный оборот педалей (колесо делает N оборотов, где N = передаточное отношение). Также известно как 'Rollout'.">
+                    <span>Development (м)</span>
+                  </Tooltip>{" "}
+                  {/* <-- ВСЁ В ОДНУ СТРОКУ, без пробелов и переносов */}
+                </th>
                 <th style={{ padding: "8px" }}>Скорость (км/ч)</th>
-                <th style={{ padding: "8px" }}>Gear Inches (дюймы)</th>
+                <th style={{ padding: "8px" }}>
+                  <Tooltip text="Историческая мера 'тяжести' передачи. Представляет собой диаметр 'виртуального' колеса, которое проезжает то же расстояние за один оборот педалей, что и текущая передача. Чем больше значение, тем 'тяжелее' передача.">
+                    <span>Gear Inches (дюймы)</span>
+                  </Tooltip>{" "}
+                  {/* <-- ВСЁ В ОДНУ СТРОКУ, без пробелов и переносов */}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -144,12 +151,12 @@ const GearRatioResultPanel: React.FC<GearRatioResultPanelProps> = ({
       </Group>
 
       <GearChart
-        data={results.results} // Эти данные по-прежнему передаются, хотя GearChart их теперь не использует для расчетов
-        initialCadence={results.cadence} // Передаем начальный каденс
-        onCadenceChange={handleChartCadenceChange} // Передаем обработчик изменения каденса
-        calculatedWheelDiameter={calculatedData.wheelDiameter} // Передаем диаметр колеса
-        initialChainrings={calculatedData.chainrings} // Передаем передние звезды
-        initialCassette={calculatedData.cassette} // Передаем задние звезды
+        data={results.results}
+        initialCadence={results.cadence}
+        onCadenceChange={handleChartCadenceChange}
+        calculatedWheelDiameter={calculatedData.wheelDiameter}
+        initialChainrings={calculatedData.chainrings}
+        initialCassette={calculatedData.cassette}
       />
 
       <Group>
